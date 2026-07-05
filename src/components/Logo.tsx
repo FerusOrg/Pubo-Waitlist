@@ -26,6 +26,7 @@ export default function Logo({ className = "", iconOnly = false, size = "md" }: 
             src="/logo.svg" 
             alt="PUBO Logo" 
             referrerPolicy="no-referrer"
+            fetchPriority="high"
             className="w-full h-full object-contain rounded-[28%]"
             onError={() => setImageError(true)}
           />

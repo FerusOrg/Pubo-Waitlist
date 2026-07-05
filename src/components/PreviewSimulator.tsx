@@ -21,7 +21,7 @@ import { motion, AnimatePresence } from "motion/react";
 
 type Platform = "Twitter" | "LinkedIn" | "Instagram" | "Threads";
 
-export default function PreviewSimulator() {
+const PreviewSimulator = React.memo(function PreviewSimulator() {
   const [text, setText] = useState(
     "Stop jumping between tabs. Draft, schedule, and analyze all your social channels in one unified, high-octane workspace. Meet pubo. 🚀 #SaaS #CreatorEconomy"
   );
@@ -524,4 +524,6 @@ export default function PreviewSimulator() {
       </div>
     </div>
   );
-}
+});
+
+export default PreviewSimulator;
