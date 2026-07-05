@@ -40,7 +40,7 @@ const PLATFORMS = [
   { name: "Mastodon", icon: "🐘" }
 ];
 
-export default function WaitlistForm({ onSignupSuccess, referrerCode, onNavigate }: WaitlistFormProps) {
+const WaitlistForm = React.memo(function WaitlistForm({ onSignupSuccess, referrerCode, onNavigate }: WaitlistFormProps) {
   const [email, setEmail] = useState("");
   const [selectedRole, setSelectedRole] = useState("Content Creator");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["Twitter/X", "LinkedIn"]);
@@ -374,7 +374,7 @@ export default function WaitlistForm({ onSignupSuccess, referrerCode, onNavigate
                     `Just claimed early access to pubo! A single command center to connect all social channels and schedule queues. Secure your spot: ${window.location.origin}?ref=${signupResult.referralCode}`
                   )}`}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-3.5 bg-card rounded-lg border border-border hover:bg-muted text-editorial-ink text-xs font-bold uppercase tracking-wide transition-all"
                 >
                   <Twitter className="w-3.5 h-3.5" />
@@ -386,7 +386,7 @@ export default function WaitlistForm({ onSignupSuccess, referrerCode, onNavigate
                     `${window.location.origin}?ref=${signupResult.referralCode}`
                   )}`}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-3.5 bg-card rounded-lg border border-border hover:bg-muted text-editorial-ink text-xs font-bold uppercase tracking-wide transition-all"
                 >
                   <Linkedin className="w-3.5 h-3.5" />
@@ -409,4 +409,6 @@ export default function WaitlistForm({ onSignupSuccess, referrerCode, onNavigate
       </AnimatePresence>
     </div>
   );
-}
+});
+
+export default WaitlistForm;

@@ -5,7 +5,7 @@ interface StatsCounterProps {
   totalCount: number;
 }
 
-export default function StatsCounter({ totalCount }: StatsCounterProps) {
+const StatsCounter = React.memo(function StatsCounter({ totalCount }: StatsCounterProps) {
   return (
     <div className="flex flex-col items-center justify-center gap-5 mt-2 w-full max-w-xl mx-auto">
       {/* Stats Card */}
@@ -25,4 +25,6 @@ export default function StatsCounter({ totalCount }: StatsCounterProps) {
       </div>
     </div>
   );
-}
+});
+
+export default StatsCounter;

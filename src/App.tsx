@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Sparkles, ArrowRight, Sun, Moon, Database, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
 import Logo from "./components/Logo";
@@ -6,17 +6,17 @@ import StatsCounter from "./components/StatsCounter";
 import PreviewSimulator from "./components/PreviewSimulator";
 import WaitlistForm from "./components/WaitlistForm";
 import FeaturesBento from "./components/FeaturesBento";
-import AdminPanel from "./components/AdminPanel";
 import Footer from "./components/Footer";
 import FaqSection from "./components/FaqSection";
 import { WaitlistStats } from "./types";
 import { api } from "./lib/api";
 
-// Import newly created pages
-import RoadmapPage from "./components/RoadmapPage";
-import BlogPage from "./components/BlogPage";
-import PrivacyPage from "./components/PrivacyPage";
-import TermsPage from "./components/TermsPage";
+// Lazy load heavy page chunks and admin panel for optimal performance
+const RoadmapPage = React.lazy(() => import("./components/RoadmapPage"));
+const BlogPage = React.lazy(() => import("./components/BlogPage"));
+const PrivacyPage = React.lazy(() => import("./components/PrivacyPage"));
+const TermsPage = React.lazy(() => import("./components/TermsPage"));
+const AdminPanel = React.lazy(() => import("./components/AdminPanel"));
 
 export default function App() {
   const [stats, setStats] = useState<WaitlistStats>({
@@ -37,25 +37,25 @@ export default function App() {
   });
 
   // Sync statistics from API
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       const data = await api.getStats();
       setStats(data);
     } catch (error) {
       console.error("Failed to sync waitlist statistics:", error);
     }
-  };
+  }, []);
 
   // Navigate helper
-  const navigateTo = (path: string) => {
+  const navigateTo = useCallback((path: string) => {
     window.history.pushState({}, "", path);
     setCurrentPath(path);
     setIsAdminOpen(path === "/console" || path === "/console/");
     window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  }, []);
 
   // Nav click that supports page-redirect fallback before scrolling
-  const handleNavClick = (hash: string) => {
+  const handleNavClick = useCallback((hash: string) => {
     if (currentPath !== "/") {
       navigateTo("/");
       setTimeout(() => {
@@ -64,7 +64,7 @@ export default function App() {
     } else {
       document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
     }
-  };
+  }, [currentPath, navigateTo]);
 
   useEffect(() => {
     loadStats();
@@ -152,17 +152,17 @@ export default function App() {
     localStorage.setItem("pubo_theme", theme);
   }, [theme]);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
-  };
+  }, []);
 
-  const handleSignupSuccess = (newEntry: any) => {
+  const handleSignupSuccess = useCallback((newEntry: any) => {
     loadStats();
     
     setTimeout(() => {
       document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" });
     }, 400);
-  };
+  }, [loadStats]);
 
   return (
     <div className="min-h-screen bg-editorial-bg text-editorial-ink selection:bg-brand-500/20 selection:text-editorial-ink relative transition-colors duration-500">
@@ -179,22 +179,24 @@ export default function App() {
           </button>
           
           <div className="hidden md:flex items-center gap-6 text-xs tracking-tight font-medium text-editorial-ink-light transition-colors duration-200">
-            <button onClick={() => handleNavClick("simulator")} className="hover:text-brand-500 transition-colors duration-200 cursor-pointer focus:outline-none">Demo</button>
-            <button onClick={() => handleNavClick("features")} className="hover:text-brand-500 transition-colors duration-200 cursor-pointer focus:outline-none">Features</button>
-            <button onClick={() => handleNavClick("faq")} className="hover:text-brand-500 transition-colors duration-200 cursor-pointer focus:outline-none">FAQ</button>
-            <button 
-              onClick={() => navigateTo("/roadmap")} 
+            <a href="#simulator" onClick={(e) => { e.preventDefault(); handleNavClick("simulator"); }} className="hover:text-brand-500 transition-colors duration-200 cursor-pointer focus:outline-none">Demo</a>
+            <a href="#features" onClick={(e) => { e.preventDefault(); handleNavClick("features"); }} className="hover:text-brand-500 transition-colors duration-200 cursor-pointer focus:outline-none">Features</a>
+            <a href="#faq" onClick={(e) => { e.preventDefault(); handleNavClick("faq"); }} className="hover:text-brand-500 transition-colors duration-200 cursor-pointer focus:outline-none">FAQ</a>
+            <a 
+              href="/roadmap"
+              onClick={(e) => { e.preventDefault(); navigateTo("/roadmap"); }} 
               className={`transition-colors duration-200 cursor-pointer focus:outline-none ${currentPath === "/roadmap" ? "text-brand-500 font-bold" : "hover:text-brand-500"}`}
             >
               Roadmap
-            </button>
-            <button 
-              onClick={() => navigateTo("/blog")} 
+            </a>
+            <a 
+              href="/blog"
+              onClick={(e) => { e.preventDefault(); navigateTo("/blog"); }} 
               className={`transition-colors duration-200 cursor-pointer focus:outline-none ${currentPath.startsWith("/blog") ? "text-brand-500 font-bold" : "hover:text-brand-500"}`}
             >
               Blog
-            </button>
-            <button onClick={() => handleNavClick("waitlist")} className="hover:text-brand-500 transition-colors duration-200 cursor-pointer focus:outline-none">Join</button>
+            </a>
+            <a href="#waitlist" onClick={(e) => { e.preventDefault(); handleNavClick("waitlist"); }} className="hover:text-brand-500 transition-colors duration-200 cursor-pointer focus:outline-none">Join</a>
           </div>
 
           <div className="flex items-center gap-3">
@@ -225,128 +227,137 @@ export default function App() {
 
       {/* MAIN CONTENT CONTAINER */}
       <main className="relative z-10 w-full min-h-[60vh] flex flex-col items-center">
-        {currentPath === "/" || currentPath.startsWith("/console") ? (
-          <div className="w-full max-w-5xl mx-auto px-4 pt-16 sm:pt-28 pb-12 flex flex-col items-center">
-            {/* Confident, Natural Main Title */}
-            <div className="text-center max-w-3xl space-y-6 mb-8">
-              <motion.h1
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-                className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50 leading-[1.1]"
-              >
-                Create once. <br />
-                <span className="text-brand-500">Publish everywhere.</span>
-              </motion.h1>
+        <React.Suspense fallback={
+          <div className="w-full max-w-5xl mx-auto px-4 py-24 flex flex-col items-center justify-center gap-3">
+            <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-xs text-editorial-ink-light font-mono">Loading page...</p>
+          </div>
+        }>
+          {currentPath === "/" || currentPath.startsWith("/console") ? (
+            <div className="w-full max-w-5xl mx-auto px-4 pt-16 sm:pt-28 pb-12 flex flex-col items-center">
+              {/* Confident, Natural Main Title */}
+              <div className="text-center max-w-3xl space-y-6 mb-8">
+                <motion.h1
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                  className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50 leading-[1.1]"
+                >
+                  Create once. <br />
+                  <span className="text-brand-500">Publish everywhere.</span>
+                </motion.h1>
 
-              <motion.p
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
-                className="text-base sm:text-lg text-editorial-ink-light max-w-xl mx-auto leading-relaxed"
-              >
-                An elegant omnichannel publishing deck for creators. Orchestrate threads, reels, and feeds across all platforms in a single breath.
-              </motion.p>
-            </div>
-
-            {/* Social Proof Counter */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="w-full mb-20"
-            >
-              <StatsCounter totalCount={stats.totalCount} />
-            </motion.div>
-
-            {/* INTERACTIVE DEMO (THE SIMULATOR) */}
-            <div id="simulator" className="w-full mt-8 mb-20 scroll-mt-28">
-              <div className="text-center max-w-xl mx-auto mb-10 flex flex-col items-center">
-                <h2 className="text-3xl sm:text-4xl font-bold text-neutral-900 dark:text-neutral-50 tracking-tight">
-                  Composer Lab
-                </h2>
-                <p className="text-sm text-editorial-ink-light mt-2 transition-colors duration-200">
-                  Craft updates below and watch Pubo model-optimize each network preview in real-time.
-                </p>
+                <motion.p
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+                  className="text-base sm:text-lg text-editorial-ink-light max-w-xl mx-auto leading-relaxed"
+                >
+                  An elegant omnichannel publishing deck for creators. Orchestrate threads, reels, and feeds across all platforms in a single breath.
+                </motion.p>
               </div>
-              
-              <PreviewSimulator />
-            </div>
 
-            {/* BENTO GRID OF CAPABILITIES */}
-            <div id="features" className="w-full mt-6 mb-20 scroll-mt-28">
-              <FeaturesBento />
-            </div>
+              {/* Social Proof Counter */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="w-full mb-20"
+              >
+                <StatsCounter totalCount={stats.totalCount} />
+              </motion.div>
 
-            {/* WAITLIST SIGNUP FORM */}
-            <div id="waitlist" className="w-full mt-6 py-6 scroll-mt-28">
-              <WaitlistForm 
-                onSignupSuccess={handleSignupSuccess} 
-                referrerCode={referrerCode} 
-                onNavigate={navigateTo}
+              {/* INTERACTIVE DEMO (THE SIMULATOR) */}
+              <div id="simulator" className="w-full mt-8 mb-20 scroll-mt-28">
+                <div className="text-center max-w-xl mx-auto mb-10 flex flex-col items-center">
+                  <h2 className="text-3xl sm:text-4xl font-bold text-neutral-900 dark:text-neutral-50 tracking-tight">
+                    Composer Lab
+                  </h2>
+                  <p className="text-sm text-editorial-ink-light mt-2 transition-colors duration-200">
+                    Craft updates below and watch Pubo model-optimize each network preview in real-time.
+                  </p>
+                </div>
+                
+                <PreviewSimulator />
+              </div>
+
+              {/* BENTO GRID OF CAPABILITIES */}
+              <div id="features" className="w-full mt-6 mb-20 scroll-mt-28">
+                <FeaturesBento />
+              </div>
+
+              {/* WAITLIST SIGNUP FORM */}
+              <div id="waitlist" className="w-full mt-6 py-6 scroll-mt-28">
+                <WaitlistForm 
+                  onSignupSuccess={handleSignupSuccess} 
+                  referrerCode={referrerCode} 
+                  onNavigate={navigateTo}
+                />
+              </div>
+
+              {/* FAQ ACCORDION SECTION */}
+              <FaqSection />
+            </div>
+          ) : currentPath === "/roadmap" ? (
+            <div className="w-full pt-16">
+              <RoadmapPage 
+                onNavigateHome={() => navigateTo("/")} 
+                onJoinWaitlist={() => handleNavClick("waitlist")}
               />
             </div>
-
-            {/* FAQ ACCORDION SECTION */}
-            <FaqSection />
-          </div>
-        ) : currentPath === "/roadmap" ? (
-          <div className="w-full pt-16">
-            <RoadmapPage 
-              onNavigateHome={() => navigateTo("/")} 
-              onJoinWaitlist={() => handleNavClick("waitlist")}
-            />
-          </div>
-        ) : currentPath.startsWith("/blog") ? (
-          <div className="w-full pt-16">
-            <BlogPage 
-              currentPath={currentPath}
-              onNavigate={navigateTo}
-              onJoinWaitlist={() => handleNavClick("waitlist")}
-            />
-          </div>
-        ) : currentPath === "/privacy" ? (
-          <div className="w-full pt-16">
-            <PrivacyPage onNavigateHome={() => navigateTo("/")} />
-          </div>
-        ) : currentPath === "/terms" ? (
-          <div className="w-full pt-16">
-            <TermsPage onNavigateHome={() => navigateTo("/")} />
-          </div>
-        ) : (
-          <div className="w-full max-w-md mx-auto text-center py-24 px-4 space-y-4">
-            <h1 className="text-4xl font-bold text-neutral-900 dark:text-neutral-50">404 - Desk Not Found</h1>
-            <p className="text-editorial-ink-light text-sm leading-relaxed">
-              This terminal path is not configured. Return to the main command deck to secure your registration spot.
-            </p>
-            <button
-              onClick={() => navigateTo("/")}
-              className="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer transition-transform duration-200 hover:scale-[1.01]"
-            >
-              Go to Home Deck
-            </button>
-          </div>
-        )}
+          ) : currentPath.startsWith("/blog") ? (
+            <div className="w-full pt-16">
+              <BlogPage 
+                currentPath={currentPath}
+                onNavigate={navigateTo}
+                onJoinWaitlist={() => handleNavClick("waitlist")}
+              />
+            </div>
+          ) : currentPath === "/privacy" ? (
+            <div className="w-full pt-16">
+              <PrivacyPage onNavigateHome={() => navigateTo("/")} />
+            </div>
+          ) : currentPath === "/terms" ? (
+            <div className="w-full pt-16">
+              <TermsPage onNavigateHome={() => navigateTo("/")} />
+            </div>
+          ) : (
+            <div className="w-full max-w-md mx-auto text-center py-24 px-4 space-y-4">
+              <h1 className="text-4xl font-bold text-neutral-900 dark:text-neutral-50">404 - Desk Not Found</h1>
+              <p className="text-editorial-ink-light text-sm leading-relaxed">
+                This terminal path is not configured. Return to the main command deck to secure your registration spot.
+              </p>
+              <button
+                onClick={() => navigateTo("/")}
+                className="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer transition-transform duration-200 hover:scale-[1.01]"
+              >
+                Go to Home Deck
+              </button>
+            </div>
+          )}
+        </React.Suspense>
       </main>
 
       {/* FOOTER */}
       <Footer onNavigate={navigateTo} />
 
       {/* SECRET ADMINISTRATOR PANEL MODAL */}
-      <AdminPanel 
-        isOpen={isAdminOpen} 
-        onClose={() => {
-          setIsAdminOpen(false);
-          // Restore path back to root on modal close
-          if (window.location.pathname === "/console" || window.location.pathname === "/console/") {
-            window.history.pushState({}, "", "/");
-            setCurrentPath("/");
-          } else if (window.location.hash === "#console" || window.location.hash === "#/console") {
-            window.history.pushState({}, "", window.location.pathname);
-          }
-        }} 
-        onUpdateStats={loadStats}
-      />
+      <React.Suspense fallback={null}>
+        <AdminPanel 
+          isOpen={isAdminOpen} 
+          onClose={() => {
+            setIsAdminOpen(false);
+            // Restore path back to root on modal close
+            if (window.location.pathname === "/console" || window.location.pathname === "/console/") {
+              window.history.pushState({}, "", "/");
+              setCurrentPath("/");
+            } else if (window.location.hash === "#console" || window.location.hash === "#/console") {
+              window.history.pushState({}, "", window.location.pathname);
+            }
+          }} 
+          onUpdateStats={loadStats}
+        />
+      </React.Suspense>
 
     </div>
   );

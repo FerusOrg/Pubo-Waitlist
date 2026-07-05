@@ -5,7 +5,7 @@ interface FooterProps {
   onNavigate?: (path: string) => void;
 }
 
-export default function Footer({ onNavigate }: FooterProps) {
+const Footer = React.memo(function Footer({ onNavigate }: FooterProps) {
   return (
     <footer className="w-full max-w-5xl mx-auto border-t border-editorial-border/35 mt-20 px-6 py-12 flex flex-col sm:flex-row items-center justify-between gap-6 relative z-10 text-editorial-ink transition-colors duration-200">
       
@@ -22,32 +22,38 @@ export default function Footer({ onNavigate }: FooterProps) {
 
       {/* Footer Navigation Links */}
       <nav aria-label="Footer Navigation" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-mono font-bold uppercase tracking-wider text-editorial-ink-light">
-        <button 
-          onClick={() => onNavigate?.("/roadmap")} 
+        <a 
+          href="/roadmap"
+          onClick={(e) => { e.preventDefault(); onNavigate?.("/roadmap"); }} 
           className="hover:text-brand-500 cursor-pointer focus:outline-none transition-colors"
         >
           Roadmap
-        </button>
-        <button 
-          onClick={() => onNavigate?.("/blog")} 
+        </a>
+        <a 
+          href="/blog"
+          onClick={(e) => { e.preventDefault(); onNavigate?.("/blog"); }} 
           className="hover:text-brand-500 cursor-pointer focus:outline-none transition-colors"
         >
           Blog
-        </button>
-        <button 
-          onClick={() => onNavigate?.("/privacy")} 
+        </a>
+        <a 
+          href="/privacy"
+          onClick={(e) => { e.preventDefault(); onNavigate?.("/privacy"); }} 
           className="hover:text-brand-500 cursor-pointer focus:outline-none transition-colors"
         >
           Privacy
-        </button>
-        <button 
-          onClick={() => onNavigate?.("/terms")} 
+        </a>
+        <a 
+          href="/terms"
+          onClick={(e) => { e.preventDefault(); onNavigate?.("/terms"); }} 
           className="hover:text-brand-500 cursor-pointer focus:outline-none transition-colors"
         >
           Terms
-        </button>
+        </a>
       </nav>
 
     </footer>
   );
-}
+});
+
+export default Footer;

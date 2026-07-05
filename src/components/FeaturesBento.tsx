@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 
-export default function FeaturesBento() {
+const FeaturesBento = React.memo(function FeaturesBento() {
   const features = [
     {
       icon: Zap,
@@ -85,4 +85,6 @@ export default function FeaturesBento() {
       </div>
     </section>
   );
-}
+});
+
+export default FeaturesBento;

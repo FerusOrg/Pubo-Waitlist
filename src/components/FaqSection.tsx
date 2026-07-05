@@ -8,7 +8,7 @@ interface FAQItem {
   answer: string;
 }
 
-export default function FaqSection() {
+const FaqSection = React.memo(function FaqSection() {
   const [openId, setOpenId] = useState<string | null>(null);
 
   const faqData: FAQItem[] = [
@@ -121,4 +121,6 @@ export default function FaqSection() {
       </p>
     </section>
   );
-}
+});
+
+export default FaqSection;
