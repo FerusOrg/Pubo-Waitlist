@@ -1,0 +1,6 @@
+{
+  "name": "Pubo Waitlist",
+  "description": "A stunning, highly-interactive waiting list and product landing page for Pubo, the unified social media publishing and scheduling SaaS.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

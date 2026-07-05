@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "ai-studio-pubowaitlist-d8959d5d-2174-49fe-971c-92d21e02838d",
+      "rules": "firestore.rules"
+    }
+  ]
+}
