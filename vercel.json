@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/console", "destination": "/index.html" },
+    { "source": "/((?!api/|logo.svg|assets/).*)", "destination": "/index.html" }
+  ]
+}

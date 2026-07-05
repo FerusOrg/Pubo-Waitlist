@@ -42,8 +42,13 @@ export default function App() {
   useEffect(() => {
     loadStats();
 
-    // Automatically open admin panel if accessing via /console URL
-    if (window.location.pathname === "/console" || window.location.pathname === "/console/") {
+    // Automatically open admin panel if accessing via /console URL or hash route
+    if (
+      window.location.pathname === "/console" || 
+      window.location.pathname === "/console/" ||
+      window.location.hash === "#console" ||
+      window.location.hash === "#/console"
+    ) {
       setIsAdminOpen(true);
     }
 
@@ -196,6 +201,8 @@ export default function App() {
           // Restore path back to root on modal close
           if (window.location.pathname === "/console" || window.location.pathname === "/console/") {
             window.history.pushState({}, "", "/");
+          } else if (window.location.hash === "#console" || window.location.hash === "#/console") {
+            window.history.pushState({}, "", window.location.pathname);
           }
         }} 
         onUpdateStats={loadStats}
