@@ -9,13 +9,14 @@ import {
   deleteDoc, 
   writeBatch,
   query,
-  where
+  where,
+  Firestore
 } from "firebase/firestore";
 import firebaseConfig from "../../firebase-applet-config.json";
 import { WaitlistEntry, WaitlistStats } from "../types";
 
-// Initialize Firebase client-side SDK
-let db: any = null;
+// Initialize Firebase client-side SDK with strict typing
+let db: Firestore | null = null;
 try {
   const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
   // Use the firestoreDatabaseId specified in our configuration

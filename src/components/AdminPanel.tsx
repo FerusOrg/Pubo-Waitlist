@@ -32,9 +32,10 @@ export default function AdminPanel({ isOpen, onClose, onUpdateStats }: AdminPane
 
   useEffect(() => {
     const adminToken = sessionStorage.getItem("pubo_admin_token");
-    if (adminToken === "admin_session_pubo") {
+    const adminPasscode = sessionStorage.getItem("pubo_admin_passcode");
+    if (adminToken === "admin_session_pubo" && adminPasscode) {
       setIsAuthenticated(true);
-      fetchEntries();
+      fetchEntries(adminPasscode);
     }
   }, []);
 
@@ -47,8 +48,9 @@ export default function AdminPanel({ isOpen, onClose, onUpdateStats }: AdminPane
       await api.login(passcode);
 
       sessionStorage.setItem("pubo_admin_token", "admin_session_pubo");
+      sessionStorage.setItem("pubo_admin_passcode", passcode);
       setIsAuthenticated(true);
-      fetchEntries();
+      fetchEntries(passcode);
     } catch (err: any) {
       setError(err.message || "Invalid passcode.");
     } finally {
@@ -56,11 +58,12 @@ export default function AdminPanel({ isOpen, onClose, onUpdateStats }: AdminPane
     }
   };
 
-  const fetchEntries = async () => {
+  const fetchEntries = async (currentPasscode?: string) => {
     setError(null);
     setIsLoading(true);
     try {
-      const data = await api.getEntries("puboauth2026");
+      const activePasscode = currentPasscode || sessionStorage.getItem("pubo_admin_passcode") || "";
+      const data = await api.getEntries(activePasscode);
       setEntries(data.entries);
     } catch (err: any) {
       setError(err.message || "Failed to retrieve registration data.");
@@ -76,7 +79,8 @@ export default function AdminPanel({ isOpen, onClose, onUpdateStats }: AdminPane
 
     setError(null);
     try {
-      const data = await api.clearData("puboauth2026");
+      const activePasscode = sessionStorage.getItem("pubo_admin_passcode") || "";
+      const data = await api.clearData(activePasscode);
 
       setEntries(data.entries);
       onUpdateStats();
@@ -89,6 +93,7 @@ export default function AdminPanel({ isOpen, onClose, onUpdateStats }: AdminPane
 
   const handleLogout = () => {
     sessionStorage.removeItem("pubo_admin_token");
+    sessionStorage.removeItem("pubo_admin_passcode");
     setIsAuthenticated(false);
     setEntries([]);
     setPasscode("");

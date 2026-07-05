@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import admin from "firebase-admin";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, Firestore } from "firebase-admin/firestore";
 
 interface WaitlistEntry {
   id: string;
@@ -18,7 +18,7 @@ interface WaitlistEntry {
 }
 
 const PORT = 3000;
-const PASSCODE = "puboauth2026";
+const PASSCODE = process.env.ADMIN_PASSCODE || "puboauth2026";
 const DATA_DIR = path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "waitlist.json");
 
@@ -28,7 +28,7 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 
 // Initialize Firebase Admin securely from config
-let db: any = null;
+let db: Firestore | null = null;
 const configPath = path.join(process.cwd(), "firebase-applet-config.json");
 if (fs.existsSync(configPath)) {
   try {
@@ -141,6 +141,35 @@ async function saveEntries(entries: WaitlistEntry[]) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(entries, null, 2), "utf-8");
 }
 
+// In-memory rate limiting map for security mitigation (DDoS, Brute force, Spam submissions)
+interface RateLimitInfo {
+  count: number;
+  resetTime: number;
+}
+const ipLimits = new Map<string, RateLimitInfo>();
+
+function rateLimit(limit: number, windowMs: number) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const rawIp = req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
+    const ip = Array.isArray(rawIp) ? rawIp[0] : (typeof rawIp === "string" ? rawIp.split(",")[0].trim() : "unknown");
+    const now = Date.now();
+    const userLimit = ipLimits.get(ip);
+
+    if (!userLimit || now > userLimit.resetTime) {
+      ipLimits.set(ip, { count: 1, resetTime: now + windowMs });
+      return next();
+    }
+
+    if (userLimit.count >= limit) {
+      res.setHeader("Retry-After", Math.ceil((userLimit.resetTime - now) / 1000).toString());
+      return res.status(429).json({ error: "Too many requests from this IP. Please try again later." });
+    }
+
+    userLimit.count++;
+    next();
+  };
+}
+
 async function startServer() {
   // Probe Firestore connection to verify permissions before using it
   if (db) {
@@ -160,12 +189,24 @@ async function startServer() {
   const app = express();
   app.use(express.json());
 
-  // Waitlist Signup Endpoint
-  app.post("/api/waitlist/signup", async (req, res) => {
+  // Configure production-grade secure HTTP response headers
+  app.use((req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    // Ensure strict transport security when served over HTTPS
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+    next();
+  });
+
+  // Waitlist Signup Endpoint (rate limited to 10 submissions per 10 minutes)
+  app.post("/api/waitlist/signup", rateLimit(10, 10 * 60 * 1000), async (req, res) => {
     try {
       const { email, role, platforms, referredBy } = req.body;
 
-      if (!email || typeof email !== "string" || !email.includes("@")) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || typeof email !== "string" || !emailRegex.test(email.trim())) {
         return res.status(400).json({ error: "Please enter a valid email address." });
       }
 
@@ -295,8 +336,8 @@ async function startServer() {
     }
   });
 
-  // Admin Verification
-  app.post("/api/waitlist/admin/login", (req, res) => {
+  // Admin Verification (Brute-force protection: limited to 5 login attempts per 5 minutes)
+  app.post("/api/waitlist/admin/login", rateLimit(5, 5 * 60 * 1000), (req, res) => {
     const { passcode } = req.body;
     if (passcode === PASSCODE) {
       res.json({ success: true, token: "admin_session_pubo" });
