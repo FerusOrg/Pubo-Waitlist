@@ -212,6 +212,18 @@ async function startServer() {
         return res.status(400).json({ error: "Please enter a valid email address." });
       }
 
+      if (role && typeof role !== "string") {
+        return res.status(400).json({ error: "Invalid role specified." });
+      }
+
+      if (platforms && (!Array.isArray(platforms) || !platforms.every(p => typeof p === "string"))) {
+        return res.status(400).json({ error: "Invalid platforms list format." });
+      }
+
+      if (referredBy && typeof referredBy !== "string") {
+        return res.status(400).json({ error: "Invalid referral code format." });
+      }
+
       const entries = await getEntries();
 
       // Check if duplicate email
@@ -341,6 +353,9 @@ async function startServer() {
   // Admin Verification (Brute-force protection: limited to 5 login attempts per 5 minutes)
   app.post("/api/waitlist/admin/login", rateLimit(5, 5 * 60 * 1000), (req, res) => {
     const { passcode } = req.body;
+    if (typeof passcode !== "string") {
+      return res.status(400).json({ error: "Invalid passcode format." });
+    }
     if (passcode === PASSCODE) {
       res.json({ success: true, token: "admin_session_pubo" });
     } else {
@@ -351,7 +366,7 @@ async function startServer() {
   // Admin Entries Retrieval
   app.post("/api/waitlist/admin/entries", async (req, res) => {
     const { passcode } = req.body;
-    if (passcode !== PASSCODE) {
+    if (typeof passcode !== "string" || passcode !== PASSCODE) {
       return res.status(401).json({ error: "Unauthorized access." });
     }
 
@@ -369,7 +384,7 @@ async function startServer() {
   // Admin Reset / Clear (re-initialize mock data)
   app.post("/api/waitlist/admin/clear", async (req, res) => {
     const { passcode } = req.body;
-    if (passcode !== PASSCODE) {
+    if (typeof passcode !== "string" || passcode !== PASSCODE) {
       return res.status(401).json({ error: "Unauthorized access." });
     }
 
