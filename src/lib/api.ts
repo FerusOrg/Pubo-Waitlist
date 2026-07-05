@@ -53,17 +53,66 @@ function maskEmail(email: string): string {
   return `${maskedLocal}@${maskedDomain}`;
 }
 
+// Firestore custom error wrappers for proper telemetry and diagnosis as instructed in the guidelines
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: null,
+      email: null,
+      emailVerified: null,
+      isAnonymous: null,
+      tenantId: null,
+      providerInfo: []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
 // Direct client-side Firestore implementation
 const clientDb = {
   async getEntries(): Promise<WaitlistEntry[]> {
     if (!db) throw new Error("Firestore is not initialized.");
-    const snapshot = await getDocs(collection(db, "waitlist"));
-    const list: WaitlistEntry[] = [];
-    snapshot.forEach((doc) => {
-      list.push(doc.data() as WaitlistEntry);
-    });
-    // Sort by position or date to maintain order
-    return list.sort((a, b) => a.position - b.position);
+    try {
+      const snapshot = await getDocs(collection(db, "waitlist"));
+      const list: WaitlistEntry[] = [];
+      snapshot.forEach((doc) => {
+        list.push(doc.data() as WaitlistEntry);
+      });
+      // Sort by position or date to maintain order
+      return list.sort((a, b) => a.position - b.position);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, "waitlist");
+    }
   },
 
   async signup(email: string, role: string, platforms: string[], referredBy?: string) {
@@ -89,9 +138,13 @@ const clientDb = {
       const referee = entries.find(e => e.referralCode.toUpperCase() === referredBy.trim().toUpperCase());
       if (referee) {
         const refereeRef = doc(db, "waitlist", referee.id);
-        await updateDoc(refereeRef, {
-          referralCount: referee.referralCount + 1
-        });
+        try {
+          await updateDoc(refereeRef, {
+            referralCount: referee.referralCount + 1
+          });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, `waitlist/${referee.id}`);
+        }
       }
     }
 
@@ -107,7 +160,11 @@ const clientDb = {
       referralCount: 0
     };
 
-    await setDoc(doc(db, "waitlist", newId), newEntry);
+    try {
+      await setDoc(doc(db, "waitlist", newId), newEntry);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `waitlist/${newId}`);
+    }
     return { isDuplicate: false, entry: newEntry };
   },
 
@@ -149,7 +206,11 @@ const clientDb = {
     entries.forEach((e) => {
       batch.delete(doc(db, "waitlist", e.id));
     });
-    await batch.commit();
+    try {
+      await batch.commit();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, "waitlist");
+    }
     return { entries: [] };
   }
 };
