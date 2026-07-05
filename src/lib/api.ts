@@ -1,28 +1,26 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { 
-  getFirestore, 
-  collection, 
-  getDocs, 
-  doc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  writeBatch,
-  query,
-  where,
-  Firestore
-} from "firebase/firestore";
-import firebaseConfig from "../../firebase-applet-config.json";
 import { WaitlistEntry, WaitlistStats } from "../types";
 
-// Initialize Firebase client-side SDK with strict typing
-let db: Firestore | null = null;
-try {
-  const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-  // Use the firestoreDatabaseId specified in our configuration
-  db = getFirestore(app, firebaseConfig.firestoreDatabaseId || "(default)");
-} catch (error) {
-  console.error("Firebase Client SDK Initialization failed:", error);
+// Lazy-load Firebase modules only when standard network API routes fail and we fallback to clientDb.
+let cachedDb: any = null;
+let cachedFirebaseModule: any = null;
+
+async function getFirebaseClient() {
+  if (cachedDb && cachedFirebaseModule) {
+    return { db: cachedDb, fs: cachedFirebaseModule };
+  }
+  try {
+    const { initializeApp, getApps, getApp } = await import("firebase/app");
+    const fs = await import("firebase/firestore");
+    const firebaseConfig = await import("../../firebase-applet-config.json").then((m) => m.default || m);
+
+    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    cachedDb = fs.getFirestore(app, firebaseConfig.firestoreDatabaseId || "(default)");
+    cachedFirebaseModule = fs;
+    return { db: cachedDb, fs: cachedFirebaseModule };
+  } catch (error) {
+    console.error("Firebase Client SDK Lazy Initialization failed:", error);
+    throw error;
+  }
 }
 
 // Helper to format timeAgo
@@ -98,14 +96,14 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
-// Direct client-side Firestore implementation
+// Direct client-side Firestore implementation (lazy loaded)
 const clientDb = {
   async getEntries(): Promise<WaitlistEntry[]> {
-    if (!db) throw new Error("Firestore is not initialized.");
     try {
-      const snapshot = await getDocs(collection(db, "waitlist"));
+      const { db, fs } = await getFirebaseClient();
+      const snapshot = await fs.getDocs(fs.collection(db, "waitlist"));
       const list: WaitlistEntry[] = [];
-      snapshot.forEach((doc) => {
+      snapshot.forEach((doc: any) => {
         list.push(doc.data() as WaitlistEntry);
       });
       // Sort by position or date to maintain order
@@ -116,7 +114,6 @@ const clientDb = {
   },
 
   async signup(email: string, role: string, platforms: string[], referredBy?: string) {
-    if (!db) throw new Error("Firestore is not initialized.");
     const entries = await this.getEntries();
     const normalizedEmail = email.trim().toLowerCase();
     
@@ -133,13 +130,15 @@ const clientDb = {
 
     const newId = "wt_" + Math.random().toString(36).substring(2, 11);
     
+    const { db, fs } = await getFirebaseClient();
+
     // If referredBy code is specified, find the referee and update them
     if (referredBy) {
       const referee = entries.find(e => e.referralCode.toUpperCase() === referredBy.trim().toUpperCase());
       if (referee) {
-        const refereeRef = doc(db, "waitlist", referee.id);
+        const refereeRef = fs.doc(db, "waitlist", referee.id);
         try {
-          await updateDoc(refereeRef, {
+          await fs.updateDoc(refereeRef, {
             referralCount: referee.referralCount + 1
           });
         } catch (error) {
@@ -161,7 +160,7 @@ const clientDb = {
     };
 
     try {
-      await setDoc(doc(db, "waitlist", newId), newEntry);
+      await fs.setDoc(fs.doc(db, "waitlist", newId), newEntry);
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `waitlist/${newId}`);
     }
@@ -200,11 +199,11 @@ const clientDb = {
   },
 
   async clearData() {
-    if (!db) throw new Error("Firestore is not initialized.");
+    const { db, fs } = await getFirebaseClient();
     const entries = await this.getEntries();
-    const batch = writeBatch(db);
+    const batch = fs.writeBatch(db);
     entries.forEach((e) => {
-      batch.delete(doc(db, "waitlist", e.id));
+      batch.delete(fs.doc(db, "waitlist", e.id));
     });
     try {
       await batch.commit();

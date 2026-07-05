@@ -3,15 +3,16 @@ import { Sparkles, ArrowRight, Sun, Moon, Database, ChevronRight } from "lucide-
 import { motion } from "motion/react";
 import Logo from "./components/Logo";
 import StatsCounter from "./components/StatsCounter";
-import PreviewSimulator from "./components/PreviewSimulator";
 import WaitlistForm from "./components/WaitlistForm";
-import FeaturesBento from "./components/FeaturesBento";
 import Footer from "./components/Footer";
-import FaqSection from "./components/FaqSection";
 import { WaitlistStats } from "./types";
 import { api } from "./lib/api";
 
-// Lazy load heavy page chunks and admin panel for optimal performance
+// Lazy load heavy page chunks, below-the-fold content, and admin panel for optimal performance
+const PreviewSimulator = React.lazy(() => import("./components/PreviewSimulator"));
+const FeaturesBento = React.lazy(() => import("./components/FeaturesBento"));
+const FaqSection = React.lazy(() => import("./components/FaqSection"));
+
 const RoadmapPage = React.lazy(() => import("./components/RoadmapPage"));
 const BlogPage = React.lazy(() => import("./components/BlogPage"));
 const PrivacyPage = React.lazy(() => import("./components/PrivacyPage"));
@@ -227,115 +228,136 @@ export default function App() {
 
       {/* MAIN CONTENT CONTAINER */}
       <main className="relative z-10 w-full min-h-[60vh] flex flex-col items-center">
-        <React.Suspense fallback={
-          <div className="w-full max-w-5xl mx-auto px-4 py-24 flex flex-col items-center justify-center gap-3">
-            <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-xs text-editorial-ink-light font-mono">Loading page...</p>
-          </div>
-        }>
-          {currentPath === "/" || currentPath.startsWith("/console") ? (
-            <div className="w-full max-w-5xl mx-auto px-4 pt-16 sm:pt-28 pb-12 flex flex-col items-center">
-              {/* Confident, Natural Main Title */}
-              <div className="text-center max-w-3xl space-y-6 mb-8">
-                <motion.h1
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, ease: "easeOut" }}
-                  className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50 leading-[1.1]"
-                >
-                  Create once. <br />
-                  <span className="text-brand-500">Publish everywhere.</span>
-                </motion.h1>
-
-                <motion.p
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
-                  className="text-base sm:text-lg text-editorial-ink-light max-w-xl mx-auto leading-relaxed"
-                >
-                  An elegant omnichannel publishing deck for creators. Orchestrate threads, reels, and feeds across all platforms in a single breath.
-                </motion.p>
-              </div>
-
-              {/* Social Proof Counter */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                className="w-full mb-20"
+        {currentPath === "/" || currentPath.startsWith("/console") ? (
+          <div className="w-full max-w-5xl mx-auto px-4 pt-16 sm:pt-28 pb-12 flex flex-col items-center">
+            {/* Confident, Natural Main Title */}
+            <div className="text-center max-w-3xl space-y-6 mb-8">
+              <motion.h1
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50 leading-[1.1]"
               >
-                <StatsCounter totalCount={stats.totalCount} />
-              </motion.div>
+                Create once. <br />
+                <span className="text-brand-500">Publish everywhere.</span>
+              </motion.h1>
 
-              {/* INTERACTIVE DEMO (THE SIMULATOR) */}
-              <div id="simulator" className="w-full mt-8 mb-20 scroll-mt-28">
-                <div className="text-center max-w-xl mx-auto mb-10 flex flex-col items-center">
-                  <h2 className="text-3xl sm:text-4xl font-bold text-neutral-900 dark:text-neutral-50 tracking-tight">
-                    Composer Lab
-                  </h2>
-                  <p className="text-sm text-editorial-ink-light mt-2 transition-colors duration-200">
-                    Craft updates below and watch Pubo model-optimize each network preview in real-time.
-                  </p>
+              <motion.p
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+                className="text-base sm:text-lg text-editorial-ink-light max-w-xl mx-auto leading-relaxed"
+              >
+                An elegant omnichannel publishing deck for creators. Orchestrate threads, reels, and feeds across all platforms in a single breath.
+              </motion.p>
+            </div>
+
+            {/* Social Proof Counter */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="w-full mb-20"
+            >
+              <StatsCounter totalCount={stats.totalCount} />
+            </motion.div>
+
+            {/* INTERACTIVE DEMO (THE SIMULATOR) - LAZY LOADED */}
+            <div id="simulator" className="w-full mt-8 mb-20 scroll-mt-28">
+              <div className="text-center max-w-xl mx-auto mb-10 flex flex-col items-center">
+                <h2 className="text-3xl sm:text-4xl font-bold text-neutral-900 dark:text-neutral-50 tracking-tight">
+                  Composer Lab
+                </h2>
+                <p className="text-sm text-editorial-ink-light mt-2 transition-colors duration-200">
+                  Craft updates below and watch Pubo model-optimize each network preview in real-time.
+                </p>
+              </div>
+              
+              <React.Suspense fallback={
+                <div className="w-full h-80 flex flex-col items-center justify-center border border-border rounded-xl bg-card p-8 text-center gap-3">
+                  <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-xs text-editorial-ink-light font-mono">Loading Composer Lab...</p>
                 </div>
-                
+              }>
                 <PreviewSimulator />
-              </div>
+              </React.Suspense>
+            </div>
 
-              {/* BENTO GRID OF CAPABILITIES */}
-              <div id="features" className="w-full mt-6 mb-20 scroll-mt-28">
+            {/* BENTO GRID OF CAPABILITIES - LAZY LOADED */}
+            <div id="features" className="w-full mt-6 mb-20 scroll-mt-28">
+              <React.Suspense fallback={
+                <div className="w-full h-40 flex flex-col items-center justify-center border border-border rounded-xl bg-card p-6 text-center gap-2">
+                  <p className="text-xs text-editorial-ink-light font-mono">Loading feature deck...</p>
+                </div>
+              }>
                 <FeaturesBento />
-              </div>
+              </React.Suspense>
+            </div>
 
-              {/* WAITLIST SIGNUP FORM */}
-              <div id="waitlist" className="w-full mt-6 py-6 scroll-mt-28">
-                <WaitlistForm 
-                  onSignupSuccess={handleSignupSuccess} 
-                  referrerCode={referrerCode} 
-                  onNavigate={navigateTo}
+            {/* WAITLIST SIGNUP FORM */}
+            <div id="waitlist" className="w-full mt-6 py-6 scroll-mt-28">
+              <WaitlistForm 
+                onSignupSuccess={handleSignupSuccess} 
+                referrerCode={referrerCode} 
+                onNavigate={navigateTo}
+              />
+            </div>
+
+            {/* FAQ ACCORDION SECTION - LAZY LOADED */}
+            <React.Suspense fallback={
+              <div className="w-full h-20 flex items-center justify-center text-xs text-editorial-ink-light font-mono">
+                Loading FAQ...
+              </div>
+            }>
+              <FaqSection />
+            </React.Suspense>
+          </div>
+        ) : (
+          <React.Suspense fallback={
+            <div className="w-full max-w-5xl mx-auto px-4 py-24 flex flex-col items-center justify-center gap-3">
+              <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-xs text-editorial-ink-light font-mono">Loading page...</p>
+            </div>
+          }>
+            {currentPath === "/roadmap" ? (
+              <div className="w-full pt-16">
+                <RoadmapPage 
+                  onNavigateHome={() => navigateTo("/")} 
+                  onJoinWaitlist={() => handleNavClick("waitlist")}
                 />
               </div>
-
-              {/* FAQ ACCORDION SECTION */}
-              <FaqSection />
-            </div>
-          ) : currentPath === "/roadmap" ? (
-            <div className="w-full pt-16">
-              <RoadmapPage 
-                onNavigateHome={() => navigateTo("/")} 
-                onJoinWaitlist={() => handleNavClick("waitlist")}
-              />
-            </div>
-          ) : currentPath.startsWith("/blog") ? (
-            <div className="w-full pt-16">
-              <BlogPage 
-                currentPath={currentPath}
-                onNavigate={navigateTo}
-                onJoinWaitlist={() => handleNavClick("waitlist")}
-              />
-            </div>
-          ) : currentPath === "/privacy" ? (
-            <div className="w-full pt-16">
-              <PrivacyPage onNavigateHome={() => navigateTo("/")} />
-            </div>
-          ) : currentPath === "/terms" ? (
-            <div className="w-full pt-16">
-              <TermsPage onNavigateHome={() => navigateTo("/")} />
-            </div>
-          ) : (
-            <div className="w-full max-w-md mx-auto text-center py-24 px-4 space-y-4">
-              <h1 className="text-4xl font-bold text-neutral-900 dark:text-neutral-50">404 - Desk Not Found</h1>
-              <p className="text-editorial-ink-light text-sm leading-relaxed">
-                This terminal path is not configured. Return to the main command deck to secure your registration spot.
-              </p>
-              <button
-                onClick={() => navigateTo("/")}
-                className="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer transition-transform duration-200 hover:scale-[1.01]"
-              >
-                Go to Home Deck
-              </button>
-            </div>
-          )}
-        </React.Suspense>
+            ) : currentPath.startsWith("/blog") ? (
+              <div className="w-full pt-16">
+                <BlogPage 
+                  currentPath={currentPath}
+                  onNavigate={navigateTo}
+                  onJoinWaitlist={() => handleNavClick("waitlist")}
+                />
+              </div>
+            ) : currentPath === "/privacy" ? (
+              <div className="w-full pt-16">
+                <PrivacyPage onNavigateHome={() => navigateTo("/")} />
+              </div>
+            ) : currentPath === "/terms" ? (
+              <div className="w-full pt-16">
+                <TermsPage onNavigateHome={() => navigateTo("/")} />
+              </div>
+            ) : (
+              <div className="w-full max-w-md mx-auto text-center py-24 px-4 space-y-4">
+                <h1 className="text-4xl font-bold text-neutral-900 dark:text-neutral-50">404 - Desk Not Found</h1>
+                <p className="text-editorial-ink-light text-sm leading-relaxed">
+                  This terminal path is not configured. Return to the main command deck to secure your registration spot.
+                </p>
+                <button
+                  onClick={() => navigateTo("/")}
+                  className="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer transition-transform duration-200 hover:scale-[1.01]"
+                >
+                  Go to Home Deck
+                </button>
+              </div>
+            )}
+          </React.Suspense>
+        )}
       </main>
 
       {/* FOOTER */}
