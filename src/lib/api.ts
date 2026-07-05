@@ -156,7 +156,7 @@ const clientDb = {
       createdAt: new Date().toISOString(),
       position,
       referralCode,
-      referredBy: referredBy || undefined,
+      referredBy: referredBy || "",
       referralCount: 0
     };
 

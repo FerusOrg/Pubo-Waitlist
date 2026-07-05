@@ -129,7 +129,9 @@ async function saveEntries(entries: WaitlistEntry[]) {
       
       entries.forEach((entry) => {
         const docRef = collectionRef.doc(entry.id);
-        batch.set(docRef, entry);
+        // Deep clone via JSON serialization to completely strip out any undefined properties for Firestore
+        const cleanedEntry = JSON.parse(JSON.stringify(entry));
+        batch.set(docRef, cleanedEntry);
       });
       await batch.commit();
       return;
@@ -240,7 +242,7 @@ async function startServer() {
         createdAt: new Date().toISOString(),
         position: currentPosition,
         referralCode,
-        referredBy: referredBy || undefined,
+        referredBy: referredBy || "",
         referralCount: 0,
       };
 
