@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { WaitlistEntry } from "../types";
+import { api } from "../lib/api";
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -43,16 +44,7 @@ export default function AdminPanel({ isOpen, onClose, onUpdateStats }: AdminPane
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/waitlist/admin/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ passcode }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Login failed");
-      }
+      await api.login(passcode);
 
       sessionStorage.setItem("pubo_admin_token", "admin_session_pubo");
       setIsAuthenticated(true);
@@ -68,17 +60,7 @@ export default function AdminPanel({ isOpen, onClose, onUpdateStats }: AdminPane
     setError(null);
     setIsLoading(true);
     try {
-      const response = await fetch("/api/waitlist/admin/entries", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ passcode: "puboauth2026" }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to load entries.");
-      }
-
+      const data = await api.getEntries("puboauth2026");
       setEntries(data.entries);
     } catch (err: any) {
       setError(err.message || "Failed to retrieve registration data.");
@@ -94,16 +76,7 @@ export default function AdminPanel({ isOpen, onClose, onUpdateStats }: AdminPane
 
     setError(null);
     try {
-      const response = await fetch("/api/waitlist/admin/clear", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ passcode: "puboauth2026" }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to clear database.");
-      }
+      const data = await api.clearData("puboauth2026");
 
       setEntries(data.entries);
       onUpdateStats();

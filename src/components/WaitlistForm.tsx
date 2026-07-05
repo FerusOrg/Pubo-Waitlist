@@ -14,10 +14,12 @@ import {
   ShieldCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { api } from "../lib/api";
 
 interface WaitlistFormProps {
   onSignupSuccess: (entry: any) => void;
   referrerCode?: string;
+  onNavigate?: (path: string) => void;
 }
 
 const ROLES = [
@@ -38,11 +40,12 @@ const PLATFORMS = [
   { name: "Mastodon", icon: "🐘" }
 ];
 
-export default function WaitlistForm({ onSignupSuccess, referrerCode }: WaitlistFormProps) {
+export default function WaitlistForm({ onSignupSuccess, referrerCode, onNavigate }: WaitlistFormProps) {
   const [email, setEmail] = useState("");
   const [selectedRole, setSelectedRole] = useState("Content Creator");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["Twitter/X", "LinkedIn"]);
   const [isLoading, setIsLoading] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signupResult, setSignupResult] = useState<any>(null);
   const [copied, setCopied] = useState(false);
@@ -78,23 +81,12 @@ export default function WaitlistForm({ onSignupSuccess, referrerCode }: Waitlist
     setError(null);
 
     try {
-      const response = await fetch("/api/waitlist/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          role: selectedRole,
-          platforms: selectedPlatforms,
-          referredBy: referrerCode || undefined
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to join the waitlist.");
-      }
+      const data = await api.signup(
+        email,
+        selectedRole,
+        selectedPlatforms,
+        referrerCode || undefined
+      );
 
       setSignupResult(data.entry);
       onSignupSuccess(data.entry);
@@ -247,11 +239,44 @@ export default function WaitlistForm({ onSignupSuccess, referrerCode }: Waitlist
                 </div>
               )}
 
+              {/* Privacy and Terms Consent */}
+              <div className="flex items-start gap-2.5 pt-1 pb-1">
+                <input
+                  id="agree-terms"
+                  type="checkbox"
+                  required
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-border text-brand-500 focus:ring-brand-500/30 accent-brand-500 cursor-pointer"
+                />
+                <label htmlFor="agree-terms" className="text-[11px] text-editorial-ink-light leading-normal select-none cursor-pointer">
+                  I agree to the{" "}
+                  <button
+                    type="button"
+                    onClick={() => onNavigate?.("/privacy")}
+                    className="text-brand-500 hover:underline font-bold focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500/50 rounded px-0.5 cursor-pointer"
+                  >
+                    Privacy Policy
+                  </button>{" "}
+                  and{" "}
+                  <button
+                    type="button"
+                    onClick={() => onNavigate?.("/terms")}
+                    className="text-brand-500 hover:underline font-bold focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-500/50 rounded px-0.5 cursor-pointer"
+                  >
+                    Terms of Service
+                  </button>
+                  .
+                </label>
+              </div>
+
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-all duration-200 cursor-pointer shadow-sm"
+                disabled={isLoading || !agreed}
+                className={`w-full flex items-center justify-center gap-2 py-3 px-4 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-all duration-200 shadow-sm ${
+                  (isLoading || !agreed) ? "opacity-45 cursor-not-allowed" : "cursor-pointer"
+                }`}
               >
                 {isLoading ? (
                   <>
